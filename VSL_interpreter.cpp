@@ -8,6 +8,7 @@ using namespace std;
 bool *memory = new bool[VARIABLE_DIM] ();                                       //variables memory
 bool *temp = new bool(0);                                                       //temp variable used by current instruction
 
+int *condition_index = new int(0);                                              //temp index for if condirtion
 int *temp_index = new int(0);                                                   //temp index used by current instruction
 int *temp_index_op1 = new int(0);                                               //temp index used by current instruction as first operand
 int *temp_index_op2 = new int(0);                                               //temp index used by current instruction as second operand
@@ -20,6 +21,102 @@ string *instruction = new string[INSTRUCTION_DIM] ();                           
 //string* PC = instruction;                                                     //program counter
 
 //interpreter
+bool check(string instr) {
+    string ins = instr;
+    if(ins.substr(0, 2) != "m[") {
+            cerr << "Invalid syntax!" << endl;
+            *ins_token = -1;
+            return false;
+        }
+
+        if(ins.substr(3, 5) != "]" && ins.substr(3, 5) != "] <- ") {
+            cerr << "Invalid syntax!" << endl;
+            *ins_token = -1;
+            return false;
+        }
+
+        if(ins[2] < 48 || ins[2] > 51) {
+            cerr << "Error! Expected a value from 0 to 3." << endl;
+            *ins_token = -1;
+            return false;
+        }
+
+        sscanf((ins.substr(2, 1)).c_str(), "%d", temp_index);                          //assigning the temp index of the left value
+
+        string operation_ = ins;
+        operation_ = operation_.erase(0, 8);                                           //substring that contains only the operations to execute
+
+
+        switch(operation_.length()) {
+            case 0:
+                *ins_token = 0;
+                break;
+            case 1:
+                if(operation_[0] != '0' && operation_[0] != '1') {
+                    cerr << "Error! Expected a boolean value (0 or 1).\n";
+                    cout << operation_;
+                    *ins_token = -1;
+                    return false;
+                }
+
+                *ins_token = 1;                                                        //operation token with value 1
+                sscanf(operation_.c_str(), "%d", temp);                                //assigning the temp value of the operation
+                break;
+            case 4:
+                if(operation_.substr(0, 2) != "m[" && operation_[3] != ']') {
+                    cerr << "Invalid syntax!" << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+                if(operation_[2] < 48 || operation_[2] > 51) {
+                    cerr << "Error! Expected a value from 0 to 3." << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+
+                *ins_token = 2;                                                        //operation token with value 2
+                sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);       //assigning the temp index of the first right operand
+                break;
+            case 10:
+                if(operation_.substr(0, 2) != "m[" && operation_.substr(3, 6) != "]ORm[" && operation_[10] != ']') {
+                    cerr << "Invalid syntax!" << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+                if((operation_[2] < 48 || operation_[2] > 51) || (operation_[8] < 48 || operation_[8] > 51)) {
+                    cerr << "Error! Expected a value from 0 to 3." << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+
+                *ins_token = 3;                                                         //operation token with value 3
+                sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);        //assigning the temp index of the first right operand
+                sscanf((operation_.substr(8, 1)).c_str(), "%d", temp_index_op2);        //assigning the temp index of the second right operand
+                break;
+            case 11:
+                if(operation_.substr(0, 2) != "m[" && operation_.substr(3, 6) != "]ANDm[" && operation_[11] != ']') {
+                    cerr << "Invalid syntax!" << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+                if((operation_[2] < 48 || operation_[2] > 51) || (operation_[9] < 48 || operation_[9] > 51)) {
+                    cerr << "Error! Expected a value from 0 to 3." << endl;
+                    *ins_token = -1;
+                    return false;
+                }
+
+                *ins_token = 4;                                                         //operation token with value 1
+                sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);        //assigning the temp index of the first right operand
+                sscanf((operation_.substr(9, 1)).c_str(), "%d", temp_index_op2);        //assigning the temp index of the second right operand
+                break;
+            default:
+                cerr << "Invalid syntax!" << endl;
+                *ins_token = -1;
+                return false;
+        }
+
+        return true;
+}
 void check(int index) {
     int count = 0;
     for(int i = 0; i < instruction[index].length(); i++) {
@@ -31,94 +128,24 @@ void check(int index) {
 
     string ins = instruction[index];
     ins = ins.erase(0, count);
+    if(ins.substr(0, 2) == "if"){
+        if(ins.substr(3, 2) == "m[")
+            if(ins[6] == ']')
+                if(ins[5] >= 48 && ins[5] <= 51) {
+                    sscanf((ins.substr(5, 1)).c_str(), "%d", condition_index);
+                    if(ins.substr(8, 4) == "then") {
+                        if(memory[*condition_index]) {
+                            ins = ins.erase(0, 13);
+                            check(ins);
+                        }
+                        else
+                            return;
+                    }
+                }
 
-    if(ins.substr(0, 2) != "m[") {
-        cerr << "Invalid syntax!" << endl;
-        *ins_token = -1;
-        return;
     }
-
-    if(ins.substr(3, 5) != "]" && ins.substr(3, 5) != "] <- ") {
-        cerr << "Invalid syntax!" << endl;
-        *ins_token = -1;
-        return;
-    }
-
-    if(ins[2] < 48 || ins[2] > 51) {
-        cerr << "Error! Expected a value from 0 to 3." << endl;
-        *ins_token = -1;
-        return;
-    }
-
-    sscanf((ins.substr(2, 1)).c_str(), "%d", temp_index);                          //assigning the temp index of the left value
-
-    string operation_ = ins;
-    operation_ = operation_.erase(0, 8);                                           //substring that contains only the operations to execute
-
-
-    switch(operation_.length()) {
-        case 0:
-            *ins_token = 0;
-            break;
-        case 1:
-            if(operation_[0] != '0' && operation_[0] != '1') {
-                cerr << "Error! Expected a boolean value (0 or 1).\n";
-                cout << operation_;
-                *ins_token = -1;
-                return;
-            }
-
-            sscanf(operation_.c_str(), "%d", temp);                                //assigning the temp value of the operation
-            *ins_token = 1;                                                        //operation token with value 1
-            break;
-        case 4:
-            if(operation_.substr(0, 2) != "m[" && operation_[3] != ']') {
-                cerr << "Invalid syntax!" << endl;
-                *ins_token = -1;
-                return;
-            }
-            if(operation_[2] < 48 || operation_[2] > 51) {
-                cerr << "Error! Expected a value from 0 to 3." << endl;
-                *ins_token = -1;
-                return;
-            }
-            *ins_token = 2;                                                        //operation token with value 2
-            sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);       //assigning the temp index of the first right operand
-            break;
-        case 10:
-            if(operation_.substr(0, 2) != "m[" && operation_.substr(3, 6) != "]ORm[" && operation_[10] != ']') {
-                cerr << "Invalid syntax!" << endl;
-                *ins_token = -1;
-                return;
-            }
-            if((operation_[2] < 48 || operation_[2] > 51) || (operation_[8] < 48 || operation_[8] > 51)) {
-                cerr << "Error! Expected a value from 0 to 3." << endl;
-                *ins_token = -1;
-                return;
-            }
-            *ins_token = 3;                                                         //operation token with value 3
-            sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);        //assigning the temp index of the first right operand
-            sscanf((operation_.substr(8, 1)).c_str(), "%d", temp_index_op2);        //assigning the temp index of the second right operand
-            break;
-        case 11:
-            if(operation_.substr(0, 2) != "m[" && operation_.substr(3, 6) != "]ANDm[" && operation_[11] != ']') {
-                cerr << "Invalid syntax!" << endl;
-                *ins_token = -1;
-                return;
-            }
-            if((operation_[2] < 48 || operation_[2] > 51) || (operation_[9] < 48 || operation_[9] > 51)) {
-                cerr << "Error! Expected a value from 0 to 3." << endl;
-                *ins_token = -1;
-                return;
-            }
-            *ins_token = 4;                                                         //operation token with value 1
-            sscanf((operation_.substr(2, 1)).c_str(), "%d", temp_index_op1);        //assigning the temp index of the first right operand
-            sscanf((operation_.substr(9, 1)).c_str(), "%d", temp_index_op2);        //assigning the temp index of the second right operand
-            break;
-        default:
-            cerr << "Invalid syntax!" << endl;
-            *ins_token = -1;
-            break;
+    else {
+        check(ins);
     }
 }
 

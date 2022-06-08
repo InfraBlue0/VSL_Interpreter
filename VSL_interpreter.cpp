@@ -32,7 +32,13 @@ void check(int index) {
     string ins = instruction[index];
     ins = ins.erase(0, count);
 
-    if(ins.substr(0, 2) != "m[" && (ins.substr(3, 5) != "]" || ins.substr(3, 5) != "] <- ")) {
+    if(ins.substr(0, 2) != "m[") {
+        cerr << "Invalid syntax!" << endl;
+        *ins_token = -1;
+        return;
+    }
+
+    if(ins.substr(3, 5) != "]" && ins.substr(3, 5) != "] <- ") {
         cerr << "Invalid syntax!" << endl;
         *ins_token = -1;
         return;

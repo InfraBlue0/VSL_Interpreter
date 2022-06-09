@@ -129,8 +129,8 @@ void check(int index) {
     string ins = instruction[index];
     ins = ins.erase(0, count);
     if(ins.substr(0, 2) == "if"){
-        if(ins.substr(3, 2) == "m[")
-            if(ins[6] == ']')
+        if(ins.substr(3, 2) == "m["){
+            if(ins[6] == ']') {
                 if(ins[5] >= 48 && ins[5] <= 51) {
                     sscanf((ins.substr(5, 1)).c_str(), "%d", condition_index);
                     if(ins.substr(8, 4) == "then") {
@@ -141,12 +141,32 @@ void check(int index) {
                         else
                             return;
                     }
+                    else{
+                        cerr << "Error! Expected a value from 0 to 3." << endl;
+                        return;
+                    }
                 }
+                else{
+                    cerr << "Syntax error!" << endl;
+                    return;
+                }
+            }
+            else{
+                cerr << "Syntax error!" << endl;
+                return;
+            }
+        } 
+        else{
+            cerr << "Syntax error!" << endl;
+            return;
+        }
 
     }
-    else {
-        check(ins);
+    else if(check(ins)){
+        return;
     }
+    else
+        cerr << "Syntax error!" << endl;
 }
 
 void execute() {

@@ -138,8 +138,10 @@ void check(int index) {
                             ins = ins.erase(0, 13);
                             check(ins);
                         }
-                        else
+                        else{
+                            *ins_token = -1;
                             return;
+                        }
                     }
                     else{
                         cerr << "Error! Expected a value from 0 to 3." << endl;
